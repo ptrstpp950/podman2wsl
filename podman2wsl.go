@@ -27,10 +27,20 @@ func convertArgument(argument string) string {
 
 func convertArguments(args []string) []string {
 	prevArg := ""
+	if args[0] == "--host" {
+		args = args[2:]
+	}
 	for index := 0; index < len(args); index++ {
 		args[index] = convertArgument(args[index])
+
 		if args[index] == "{{json .}}" {
-			args[index] = "table {{json .}}"
+			if args[0] == "ps" {
+				args[index] = "{\"Command\":\"\\\"{{.Command}}\\\"\",\"CreatedAt\":\"{{.CreatedAt}}\",\"ID\":\"{{.ID}}\",\"Image\":\"{{.Image}}\",\"Labels\":\"{{.Labels}}\",\"LocalVolumes\":\"0\",\"Mounts\":\"{{.Mounts}}\",\"Names\":\"{{.Names}}\",\"Networks\":\"{{.Networks}}\",\"Ports\":\"{{.Ports}}\",\"RunningFor\":\"{{.RunningFor}}\",\"Size\":\"Unknown (TODO)\",\"State\":\"{{.State}}\",\"Status\":\"{{.Status}}\"}"
+			} else {
+				args[index] = "table {{json .}}"
+			}
+			//"table {{json .}}"
+			//"{{json .}}\\t"
 		}
 		if prevArg == "-e" {
 			args[index] = strings.ReplaceAll(args[index], ";", "\\;")
@@ -60,8 +70,9 @@ func main() {
 	args = append([]string{"podman"}, args...)
 	cmd := exec.Command("wsl.exe", args...)
 	file, _ := os.OpenFile("C:\\projects\\aspnet-core-test\\temp.log", os.O_APPEND|os.O_WRONLY, 0644)
-	log.SetOutput(file)
 	defer file.Close()
+	log.SetOutput(file)
+	//log.SetOutput(ioutil.Discard)
 	log.Print("START callId: " + callId + " cmd: " + strings.Join(args, " "))
 	if len(args) >= 4 && args[1] == "version" {
 		if strings.Contains(args[3], ".Server.Os") {
@@ -74,6 +85,7 @@ func main() {
 		}
 	}
 	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdin = os.Stdin
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 	err := cmd.Run()
