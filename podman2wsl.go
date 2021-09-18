@@ -21,22 +21,29 @@ func convertArgument(argument string) string {
 		toReplace := "$1" + root + "/$3"
 		argument = pathRegexp.ReplaceAllString(argument, toReplace)
 		argument = slashRegexp.ReplaceAllString(argument, "/")
-		argument = strings.ReplaceAll(argument, ";", "\\;")
 	}
 	return argument
 }
 
 func convertArguments(args []string) []string {
+	prevArg := ""
 	for index := 0; index < len(args); index++ {
 		args[index] = convertArgument(args[index])
 		if args[index] == "{{json .}}" {
 			args[index] = "table {{json .}}"
 		}
+		if prevArg == "-e" {
+			args[index] = strings.ReplaceAll(args[index], ";", "\\;")
+		}
+		prevArg = args[index]
+	}
+	if args[0] == "exec" {
+		args[len(args)-1] = strings.ReplaceAll(args[len(args)-1], "$", "\\$")
 	}
 	if args[0] == "events" {
 		for index := 0; index < len(args); index++ {
 			if args[index] == "-f" {
-				args[index] = "--format"
+				args[index] = "--filter"
 			}
 		}
 	}
@@ -56,10 +63,15 @@ func main() {
 	log.SetOutput(file)
 	defer file.Close()
 	log.Print("START callId: " + callId + " cmd: " + strings.Join(args, " "))
-	if len(args) >= 4 && strings.Contains(args[3], ".Server.Os") {
-		os.Stdout.WriteString("linux")
-		//log.Print("HACKED callId: " + callId + "\ncmd:\n" + strings.Join(args, "@"))
-		return
+	if len(args) >= 4 && args[1] == "version" {
+		if strings.Contains(args[3], ".Server.Os") {
+			os.Stdout.WriteString("linux")
+			return
+		}
+		if strings.Contains(args[3], ".Client.Version") {
+			os.Stdout.WriteString("3.2.3;true;3.2.3;true;")
+			return
+		}
 	}
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
