@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -60,30 +61,37 @@ func convertArguments(args []string) []string {
 	return args
 }
 
+func versionHack(args []string) bool {
+	if len(args) >= 4 && args[1] == "version" {
+		if strings.Contains(args[3], ".Server.Os") {
+			os.Stdout.WriteString("linux")
+			return true
+		}
+		if strings.Contains(args[3], ".Client.Version") {
+			os.Stdout.WriteString("3.2.3;true;3.2.3;true;")
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	//CMD: podman system service -t 0 &
-	//mydir, _ := os.Getwd()
-	//fmt.Println(mydir)
 	callId := fmt.Sprintf("%d", time.Now().UnixNano())
 	args := os.Args[1:]
 	args = convertArguments(args)
 	args = append([]string{"podman"}, args...)
 	cmd := exec.Command("wsl.exe", args...)
-	file, _ := os.OpenFile("C:\\projects\\aspnet-core-test\\temp.log", os.O_APPEND|os.O_WRONLY, 0644)
-	defer file.Close()
-	log.SetOutput(file)
-	//log.SetOutput(ioutil.Discard)
+	//file, _ := os.OpenFile("C:\\projects\\aspnet-core-test\\temp.log", os.O_APPEND|os.O_WRONLY, 0644)
+	//defer file.Close()
+	//log.SetOutput(file)
+	log.SetOutput(ioutil.Discard)
 	log.Print("START callId: " + callId + " cmd: " + strings.Join(args, " "))
-	if len(args) >= 4 && args[1] == "version" {
-		if strings.Contains(args[3], ".Server.Os") {
-			os.Stdout.WriteString("linux")
-			return
-		}
-		if strings.Contains(args[3], ".Client.Version") {
-			os.Stdout.WriteString("3.2.3;true;3.2.3;true;")
-			return
-		}
+
+	if versionHack(args) {
+		return
 	}
+
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)

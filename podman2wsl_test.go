@@ -69,3 +69,18 @@ func Test_convertArguments_Should_Replace_JSON_Format(t *testing.T) {
 		assert.Equal(t, c.expected, result)
 	}
 }
+
+func Test_versionHack_When_Not_Version_Should_Return_False(t *testing.T) {
+	args := []string{"podman", "not_version", "--format", "{{.Server.Os}}"}
+	assert.False(t, versionHack(args))
+}
+
+func Test_versionHack_When_System_Os_Return_Linux(t *testing.T) {
+	args := []string{"podman", "version", "--format", "{{.Server.Os}}"}
+	assert.True(t, versionHack(args))
+}
+
+func Test_versionHack_When_Client_Version_Return_Static_Text(t *testing.T) {
+	args := []string{"podman", "version", "--format", "{{.Client.Version}}"}
+	assert.True(t, versionHack(args))
+}
